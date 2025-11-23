@@ -2,6 +2,8 @@
 
 A tool for tracking player mentions across Rocket League YouTube videos. Searches through video transcripts to find when specific players are mentioned, with timestamps linking directly to YouTube.
 
+**Live Demo**: https://jettnguyen.github.io/RocketScope/ (once GitHub Pages is enabled)
+
 ## Features
 
 - Index multiple YouTube channels for player mentions
@@ -99,23 +101,3 @@ To clear cache and reprocess all videos:
 ```bash
 rm -rf indexer/cache/
 ```
-
-## Project Structure
-
-```
-RocketScope/
-├── indexer/           # Python scripts for processing videos
-│   ├── index_channel.py    # Main indexer
-│   ├── players.py          # List of players to track
-│   ├── friends_config.py   # Personal friends configuration
-│   └── requirements.txt    # Python dependencies
-└── frontend/          # React web interface
-    ├── src/
-    │   ├── App.jsx         # Main application
-    │   └── index.css       # Styling
-    └── package.json        # Node dependencies
-```
-
-## License
-
-MIT License
