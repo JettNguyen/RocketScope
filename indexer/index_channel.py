@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-YouTube Channel Indexer for RL Player Mentions
-Fetches video transcripts and finds player name mentions.
+YouTube Channel Indexer for Rocket League Player Mentions
+Indexes YouTube channels to find mentions of specific players in video transcripts.
 """
 
 import os
@@ -28,7 +28,7 @@ def get_channel_videos(youtube, channel_id, max_results=500):
     videos = []
     next_page = None
     
-    print(f"  🔍 Searching for videos in channel: {channel_id}")
+    print(f"Searching for videos in channel: {channel_id}")
     
     while len(videos) < max_results:
         try:
@@ -42,10 +42,10 @@ def get_channel_videos(youtube, channel_id, max_results=500):
             )
             response = request.execute()
             
-            print(f"  📊 API Response - Items: {len(response.get('items', []))}")
+            print(f"Found {len(response.get('items', []))} videos in response")
             
             if 'items' not in response:
-                print(f"  ⚠️  No 'items' in response: {list(response.keys())}")
+                print(f"Warning: No items in API response. Keys: {list(response.keys())}")
                 break
                 
             for item in response['items']:
@@ -62,7 +62,7 @@ def get_channel_videos(youtube, channel_id, max_results=500):
             
             print(f"  Fetched {len(videos)} videos...")
         except Exception as e:
-            print(f"  ❌ Error in search: {e}")
+            print(f"Error in search: {e}")
             break
     
     return videos
@@ -114,7 +114,7 @@ def find_mentions(transcript, players):
 
 def index_channel(youtube, name, channel_id):
     """Index all videos from a channel."""
-    print(f"\n📺 Indexing channel: {name}")
+    print(f"\nIndexing channel: {name}")
     
     videos = get_channel_videos(youtube, channel_id)
     print(f"  Found {len(videos)} videos")
@@ -125,13 +125,13 @@ def index_channel(youtube, name, channel_id):
         
         transcript = get_transcript(video['id'])
         if not transcript:
-            print(f"    ⚠️  No transcript available")
+            print(f"    No transcript available")
             continue
         
         mentions = find_mentions(transcript, ALL_PLAYERS)
         if mentions:
             total = sum(len(m) for m in mentions.values())
-            print(f"    ✅ Found {total} mentions of {len(mentions)} players")
+            print(f"    Found {total} mentions of {len(mentions)} players")
             indexed.append({
                 'videoId': video['id'],
                 'title': video['title'],
@@ -147,7 +147,7 @@ def index_channel(youtube, name, channel_id):
 
 def main():
     if not API_KEY:
-        print("❌ Error: Set YOUTUBE_API_KEY environment variable")
+        print("Error: Set YOUTUBE_API_KEY environment variable")
         print("   export YOUTUBE_API_KEY='your_key_here'")
         return
     
@@ -178,8 +178,8 @@ def main():
     with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
         json.dump(all_data, f, indent=2, ensure_ascii=False)
     
-    print(f"\n✅ Done! Indexed {len(all_data['videos'])} videos")
-    print(f"📁 Output: {OUTPUT_PATH}")
+    print(f"\nDone! Indexed {len(all_data['videos'])} videos")
+    print(f"Output: {OUTPUT_PATH}")
     
     # Stats
     all_players = set()
@@ -189,8 +189,8 @@ def main():
             all_players.add(player)
             total_mentions += len(mentions)
     
-    print(f"👥 Players mentioned: {len(all_players)}")
-    print(f"💬 Total mentions: {total_mentions}")
+    print(f"Players mentioned: {len(all_players)}")
+    print(f"Total mentions: {total_mentions}")
 
 if __name__ == '__main__':
     main()

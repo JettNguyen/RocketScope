@@ -138,21 +138,20 @@ PRO_PLAYERS = [
     'Gregan',
 ]
 
-# 🎯 FRIENDS LIST - Import from separate config file for easy management
+# Friends list - can be customized via friends_config.py
 try:
     from friends_config import MY_FRIENDS
     FRIENDS = MY_FRIENDS
-    print(f"✅ Loaded {len(FRIENDS)} friends from config")
+    print(f"Loaded {len(FRIENDS)} friends from config")
 except ImportError:
-    # Fallback to example friends if config file doesn't exist
+    # Default friends list if config file doesn't exist
     FRIENDS = [
         'Larry',
-        'Hammy Crackers',
+        'Hammy Crackers', 
         'Hammy',
         'Jett',
-        # Add more friends here or create friends_config.py
     ]
-    print(f"⚠️  Using example friends list. Create friends_config.py to customize!")
+    print(f"Using default friends list. Create friends_config.py to customize.")
 
 # Combine all players to track
 ALL_PLAYERS = PRO_PLAYERS + FRIENDS

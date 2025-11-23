@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Enhanced YouTube Channel Indexer with Caching
-Tracks processed videos and only processes new ones.
+YouTube Channel Indexer with Caching
+Processes YouTube channels to find player mentions in video transcripts.
 """
 
 import os
@@ -21,11 +21,7 @@ OUTPUT_PATH = Path(__file__).parent.parent / 'frontend' / 'public' / 'data' / 'm
 CACHE_PATH = Path(__file__).parent / 'cache' / 'video_cache.json'
 
 CHANNELS = {
-    'Retals': 'UCRLM6B6rGXDSJawUH_mHHPw',  # Correct Retals channel ID
-    # Add more channels here:
-    # 'SquishyMuffinz': 'UCjsY2MoYLPRCyUlmFoI2Yqg',
-    # 'SunlessKhan': 'UCd534c_ehOvrLVL2v7Nl61w',
-    # 'Lethamyr': 'UCMJCb8wW88j0e6K8Ac7Xf8A',
+    'Retals': 'UCRLM6B6rGXDSJawUH_mHHPw',
 }
 
 def load_cache():
@@ -35,16 +31,12 @@ def load_cache():
             with open(CACHE_PATH, 'r', encoding='utf-8') as f:
                 return json.load(f)
     except Exception as e:
-        print(f"⚠️  Cache load error: {e}")
+        print(f"Cache load error: {e}")
     
     return {
-        'processed_videos': {},  # video_id: {hash, mentions, processed_date}
-        'last_check': {},        # channel: last_check_date
-        'stats': {
-            'total_processed': 0,
-            'cache_hits': 0,
-            'new_videos': 0
-        }
+        'processed_videos': {},
+        'last_check': {},
+        'stats': {'total_processed': 0, 'cache_hits': 0, 'new_videos': 0}
     }
 
 def save_cache(cache_data):
@@ -54,27 +46,25 @@ def save_cache(cache_data):
         with open(CACHE_PATH, 'w', encoding='utf-8') as f:
             json.dump(cache_data, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        print(f"⚠️  Cache save error: {e}")
+        print(f"Cache save error: {e}")
 
 def get_video_hash(video):
     """Generate hash for video to detect changes."""
-    # Hash based on title and date (if video is re-uploaded or title changes)
     content = f"{video['title']}-{video['date']}"
     return hashlib.md5(content.encode()).hexdigest()
 
 def get_channel_videos(youtube, channel_id, max_results=500, days_back=30):
-    """Fetch videos from channel, optionally filtering by date."""
+    """Fetch videos from channel."""
     videos = []
     next_page = None
     
-    # Calculate date filter (optional optimization)
     date_filter = None
     if days_back:
         date_filter = (datetime.now() - timedelta(days=days_back)).strftime('%Y-%m-%dT00:00:00Z')
     
-    print(f"  🔍 Searching for videos in channel: {channel_id}")
+    print(f"Searching for videos in channel: {channel_id}")
     if date_filter:
-        print(f"  📅 Looking for videos after: {date_filter[:10]}")
+        print(f"Looking for videos after: {date_filter[:10]}")
     
     while len(videos) < max_results:
         try:
@@ -93,10 +83,10 @@ def get_channel_videos(youtube, channel_id, max_results=500, days_back=30):
             request = youtube.search().list(**request_params)
             response = request.execute()
             
-            print(f"  📊 API Response - Items: {len(response.get('items', []))}")
+            print(f"Found {len(response.get('items', []))} videos in response")
             
             if 'items' not in response:
-                print(f"  ⚠️  No 'items' in response: {list(response.keys())}")
+                print(f"Warning: No items in response. Keys: {list(response.keys())}")
                 break
                 
             for item in response['items']:
@@ -111,9 +101,9 @@ def get_channel_videos(youtube, channel_id, max_results=500, days_back=30):
             if not next_page:
                 break
             
-            print(f"  Fetched {len(videos)} videos...")
+            print(f"Fetched {len(videos)} videos...")
         except Exception as e:
-            print(f"  ❌ Error in search: {e}")
+            print(f"Error in search: {e}")
             break
     
     return videos
@@ -123,33 +113,31 @@ def get_transcript(video_id):
     try:
         api = YouTubeTranscriptApi()
         transcript_list = api.list(video_id)
-        # Try to find an English transcript (manual or auto-generated)
         transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
         return transcript.fetch()
     except (TranscriptsDisabled, NoTranscriptFound):
         return None
     except Exception as e:
         if "IP" in str(e) and "blocked" in str(e):
-            print(f"    ⚠️  Rate limited - skipping video")
+            print("Rate limited - skipping video")
         else:
-            print(f"    Error getting transcript: {e}")
+            print(f"Error getting transcript: {e}")
         return None
 
 def find_mentions(transcript, players):
     """Find all player mentions in a transcript."""
     mentions = {}
     
-    # Build regex patterns for each player (word boundaries)
-    patterns = {p: re.compile(rf'\b{re.escape(p)}\b', re.IGNORECASE) for p in players}
+    patterns = {p: re.compile(rf'\\b{re.escape(p)}\\b', re.IGNORECASE) for p in players}
     
     for entry in transcript:
-        text = entry.text  # Use attribute instead of dictionary access
+        text = entry.text
         for player, pattern in patterns.items():
             if pattern.search(text):
                 if player not in mentions:
                     mentions[player] = []
                 
-                secs = int(entry.start)  # Use attribute instead of dictionary access
+                secs = int(entry.start)
                 mins, secs = divmod(secs, 60)
                 hours, mins = divmod(mins, 60)
                 
@@ -167,18 +155,18 @@ def find_mentions(transcript, players):
     return mentions
 
 def index_channel_with_cache(youtube, name, channel_id, cache):
-    """Index channel videos using cache to skip already processed videos."""
-    print(f"\n📺 Indexing channel: {name}")
+    """Index channel videos using cache."""
+    print(f"\\nIndexing channel: {name}")
     
     videos = get_channel_videos(youtube, channel_id)
-    print(f"  Found {len(videos)} videos")
+    print(f"Found {len(videos)} videos")
     
     indexed = []
     new_count = 0
     cache_hits = 0
     
     for i, video in enumerate(videos):
-        print(f"  [{i+1}/{len(videos)}] {video['title'][:50]}...")
+        print(f"[{i+1}/{len(videos)}] {video['title'][:50]}...")
         
         video_hash = get_video_hash(video)
         video_id = video['id']
@@ -187,12 +175,11 @@ def index_channel_with_cache(youtube, name, channel_id, cache):
         if (video_id in cache['processed_videos'] and 
             cache['processed_videos'][video_id]['hash'] == video_hash):
             
-            # Use cached data
             cached_mentions = cache['processed_videos'][video_id]['mentions']
             if cached_mentions:
                 cache_hits += 1
                 total = sum(len(m) for m in cached_mentions.values())
-                print(f"    💾 Cached: {total} mentions of {len(cached_mentions)} players")
+                print(f"    Cached: {total} mentions of {len(cached_mentions)} players")
                 indexed.append({
                     'videoId': video['id'],
                     'title': video['title'],
@@ -202,15 +189,14 @@ def index_channel_with_cache(youtube, name, channel_id, cache):
                     'mentions': cached_mentions
                 })
             else:
-                print(f"    💾 Cached: No mentions")
+                print("    Cached: No mentions")
             continue
         
-        # Process new/changed video
+        # Process new video
         new_count += 1
         transcript = get_transcript(video['id'])
         if not transcript:
-            print(f"    ⚠️  No transcript available")
-            # Cache the fact that no transcript is available
+            print("    No transcript available")
             cache['processed_videos'][video_id] = {
                 'hash': video_hash,
                 'mentions': {},
@@ -229,7 +215,7 @@ def index_channel_with_cache(youtube, name, channel_id, cache):
         
         if mentions:
             total = sum(len(m) for m in mentions.values())
-            print(f"    ✅ Found {total} mentions of {len(mentions)} players")
+            print(f"    Found {total} mentions of {len(mentions)} players")
             indexed.append({
                 'videoId': video['id'],
                 'title': video['title'],
@@ -239,9 +225,9 @@ def index_channel_with_cache(youtube, name, channel_id, cache):
                 'mentions': mentions
             })
         else:
-            print(f"    No player mentions found")
+            print("    No player mentions found")
     
-    print(f"  📊 Cache hits: {cache_hits}, New videos: {new_count}")
+    print(f"Cache hits: {cache_hits}, New videos: {new_count}")
     cache['stats']['cache_hits'] += cache_hits
     cache['stats']['new_videos'] += new_count
     
@@ -249,15 +235,14 @@ def index_channel_with_cache(youtube, name, channel_id, cache):
 
 def main():
     if not API_KEY:
-        print("❌ Error: Set YOUTUBE_API_KEY environment variable")
+        print("Error: Set YOUTUBE_API_KEY environment variable")
         print("   export YOUTUBE_API_KEY='your_key_here'")
         return
     
-    print("🚀 Starting Enhanced Indexer with Caching")
+    print("Starting indexer with caching")
     
-    # Load cache
     cache = load_cache()
-    print(f"💾 Cache loaded: {len(cache['processed_videos'])} videos cached")
+    print(f"Cache loaded: {len(cache['processed_videos'])} videos cached")
     
     youtube = build('youtube', 'v3', developerKey=API_KEY)
     
@@ -277,30 +262,22 @@ def main():
         videos = index_channel_with_cache(youtube, name, channel_id, cache)
         all_data['videos'].extend(videos)
     
-    # Sort by date (newest first)
     all_data['videos'].sort(key=lambda x: x['date'], reverse=True)
-    
-    # Add timestamp
     all_data['lastUpdated'] = datetime.utcnow().isoformat() + 'Z'
     
-    # Update cache stats
     cache['stats']['total_processed'] = len(cache['processed_videos'])
     cache['last_check'][str(CHANNELS)] = datetime.utcnow().isoformat()
     
-    # Save cache
     save_cache(cache)
     
-    # Ensure output directory exists
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     
-    # Write JSON
     with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
         json.dump(all_data, f, indent=2, ensure_ascii=False)
     
-    print(f"\n✅ Done! Indexed {len(all_data['videos'])} videos")
-    print(f"📁 Output: {OUTPUT_PATH}")
+    print(f"\\nDone! Indexed {len(all_data['videos'])} videos")
+    print(f"Output: {OUTPUT_PATH}")
     
-    # Stats
     friend_mentions = set()
     pro_mentions = set()
     total_mentions = 0
@@ -313,10 +290,9 @@ def main():
             else:
                 pro_mentions.add(player)
     
-    print(f"👥 Pro players mentioned: {len(pro_mentions)}")
-    print(f"👫 Friends mentioned: {len(friend_mentions)}")
-    print(f"💬 Total mentions: {total_mentions}")
-    print(f"💾 Cache stats: {cache['stats']}")
+    print(f"Pro players mentioned: {len(pro_mentions)}")
+    print(f"Friends mentioned: {len(friend_mentions)}")
+    print(f"Total mentions: {total_mentions}")
 
 if __name__ == '__main__':
     main()

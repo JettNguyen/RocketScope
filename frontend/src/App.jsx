@@ -81,7 +81,7 @@ function App() {
         <div className="error">
           <h2>Error loading data</h2>
           <p>{error}</p>
-          <p>Make sure you've run the indexer to generate mentions.json</p>
+          <p>Run the indexer to generate mentions.json</p>
         </div>
       </div>
     )
@@ -90,9 +90,9 @@ function App() {
   return (
     <div className="container">
       <header>
-        <h1>🚀 RL Player Mention Search</h1>
+        <h1>Rocket League Player Mentions</h1>
         <p className="subtitle">
-          Search for pro player mentions in Rocket League videos
+          Track player mentions across Rocket League YouTube videos
         </p>
         <p className="meta">
           {data.videos.length} videos indexed • Last updated: {new Date(data.lastUpdated).toLocaleDateString()}
